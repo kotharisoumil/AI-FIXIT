@@ -1,15 +1,18 @@
-export default function DisposePage() {
+import RecommendationsMap from "../components/RecommendationsMap";
+
+export default function RecommendationsPage() {
   return (
     <main
       style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         minHeight: "calc(100vh - 120px)",
         fontFamily: "'Outfit', monospace",
         padding: "2rem",
         textAlign: "center",
+        gap: "0.7rem",
       }}
     >
       <h1
@@ -17,21 +20,12 @@ export default function DisposePage() {
           fontSize: "clamp(2rem, 5vw, 3.5rem)",
           fontWeight: 700,
           color: "var(--foreground)",
-          marginBottom: "1rem",
+          marginBottom: "0.2rem",
         }}
       >
-        DISPOSE
+        RECOMMENDATIONS
       </h1>
-      <p
-        style={{
-          fontSize: "1.1rem",
-          color: "var(--muted)",
-          maxWidth: "500px",
-          lineHeight: 1.6,
-        }}
-      >
-        Find responsible recycling and disposal options near you.
-      </p>
+      <RecommendationsMap />
     </main>
   );
 }

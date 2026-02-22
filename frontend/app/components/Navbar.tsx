@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const tabs = [
   { label: "DIAGNOSE", href: "/diagnose" },
   { label: "REPAIR", href: "/repair" },
-  { label: "DISPOSE", href: "/dispose" },
+  { label: "RECOMMENDATIONS", href: "/dispose" },
 ];
 
 export default function Navbar() {
