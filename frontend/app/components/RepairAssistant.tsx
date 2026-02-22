@@ -7,25 +7,18 @@ type ChatEntry = {
   text: string;
 };
 
-const guidanceLines = [
-  "I can see heavy background activity. Start by closing non-essential apps.",
-  "Open battery settings and enable power-save mode for immediate improvement.",
-  "Reduce screen brightness to about 60 percent and disable unnecessary Bluetooth scanning.",
-  "Run for one charge cycle and compare drain rate before replacing hardware.",
-];
-
 export default function RepairAssistant() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const [cameraOn, setCameraOn] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [chatLog, setChatLog] = useState<ChatEntry[]>([
     {
       role: "system",
-      text: "Transcript will appear here after webcam access is enabled.",
+      text: "Enable webcam to begin using Felix.",
     },
   ]);
 
@@ -34,119 +27,162 @@ export default function RepairAssistant() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
         mediaRecorderRef.current.stop();
       }
       window.speechSynthesis.cancel();
     };
   }, []);
 
+  // -------------------------------
+  // Enable Camera + Mic
+  // -------------------------------
   const enableCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
       streamRef.current = stream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
+
       setCameraOn(true);
-      setChatLog([
+      setChatLog((prev) => [
+        ...prev,
         {
           role: "system",
-          text: "Webcam connected. You can start recording and generate Gemini transcript guidance.",
+          text: "Camera + microphone connected. Press START RECORDING to speak to Felix.",
         },
       ]);
     } catch {
-      setChatLog([
+      setChatLog((prev) => [
+        ...prev,
         {
           role: "system",
-          text: "Camera access was blocked. Please allow browser video/microphone permission and try again.",
+          text:
+            "Camera/microphone permission denied. Please allow access and refresh.",
         },
       ]);
     }
   };
 
+  // -------------------------------
+  // Start Recording
+  // -------------------------------
   const startRecording = () => {
-    if (!streamRef.current || isRecording) {
-      return;
-    }
-
-    if (typeof MediaRecorder === "undefined") {
-      setChatLog((prev) => [
-        ...prev,
-        {
-          role: "system",
-          text: "Recording is not supported in this browser, but live webcam preview still works.",
-        },
-      ]);
-      return;
-    }
+    if (!streamRef.current || isRecording) return;
 
     const recorder = new MediaRecorder(streamRef.current);
     mediaRecorderRef.current = recorder;
+    audioChunksRef.current = [];
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunksRef.current.push(event.data);
+      }
+    };
+
     recorder.start();
     setIsRecording(true);
+
     setChatLog((prev) => [
       ...prev,
-      {
-        role: "system",
-        text: "Recording started. This is a local placeholder stream until CV backend is connected.",
-      },
+      { role: "system", text: "Recording..." },
+    ]);
+  };
+
+  // -------------------------------
+  // Stop Recording + Send to Backend
+  // -------------------------------
+  const stopRecording = async () => {
+    if (!mediaRecorderRef.current) return;
+
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+
+    mediaRecorderRef.current.onstop = async () => {
+      const audioBlob = new Blob(audioChunksRef.current, {
+        type: "audio/webm",
+      });
+
+      await sendToBackend(audioBlob);
+    };
+  };
+
+  // -------------------------------
+  // Capture Frame + Send
+  // -------------------------------
+  const sendToBackend = async (audioBlob: Blob) => {
+    if (!videoRef.current) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    const imageBlob: Blob = await new Promise((resolve) =>
+      canvas.toBlob((blob) => resolve(blob!), "image/jpeg")
+    );
+
+    const formData = new FormData();
+    formData.append("image", imageBlob, "frame.jpg");
+    formData.append("audio", audioBlob, "audio.webm");
+
+    setChatLog((prev) => [
+      ...prev,
+      { role: "system", text: "Analyzing with Felix..." },
     ]);
 
-    recorder.onstop = () => {
-      setIsRecording(false);
+    try {
+      const response = await fetch("http://localhost:8000/felix/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      setChatLog((prev) => [
+        ...prev,
+        { role: "system", text: `You: ${data.transcription}` },
+        { role: "gemini", text: data.felix_response },
+      ]);
+
+      speakResponse(data.felix_response);
+    } catch (error) {
       setChatLog((prev) => [
         ...prev,
         {
           role: "system",
-          text: "Recording stopped.",
+          text: "Backend error. Make sure FastAPI is running.",
         },
       ]);
-    };
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
     }
   };
 
-  const playGuidance = async () => {
-    if (isSpeaking) {
-      return;
-    }
-
-    setIsSpeaking(true);
-    setChatLog((prev) => [
-      ...prev,
-      {
-        role: "system",
-        text: "Gemini transcript stream started (placeholder for Gemini + ElevenLabs integration).",
-      },
-    ]);
-
-    for (const line of guidanceLines) {
-      setChatLog((prev) => [...prev, { role: "gemini", text: line }]);
-      await new Promise<void>((resolve) => {
-        const utterance = new SpeechSynthesisUtterance(line);
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
-        window.speechSynthesis.speak(utterance);
-      });
-    }
-
-    setChatLog((prev) => [
-      ...prev,
-      {
-        role: "system",
-        text: "Guidance complete.",
-      },
-    ]);
-    setIsSpeaking(false);
+  // -------------------------------
+  // Speak Felix Response
+  // -------------------------------
+  const speakResponse = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
   };
 
+  // -------------------------------
+  // UI
+  // -------------------------------
   return (
     <section
       style={{
@@ -178,79 +214,56 @@ export default function RepairAssistant() {
           }}
         />
 
+        {/* Buttons */}
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={enableCamera}
-            style={{
-              border: "none",
-              background: "var(--foreground)",
-              color: "var(--background)",
-              padding: "0.55rem 0.85rem",
-              fontFamily: "'Outfit', monospace",
-              fontSize: "0.8rem",
-              letterSpacing: "0.08em",
-              cursor: "pointer",
-            }}
-          >
-            ENABLE VIDEO
-          </button>
+          {!cameraOn && (
+            <button
+              onClick={enableCamera}
+              style={{
+                padding: "0.55rem 0.85rem",
+                background: "#38bdf8",
+                border: "none",
+                color: "#0a0a0a",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+            >
+              ENABLE CAMERA & MICROPHONE
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={startRecording}
-            disabled={!cameraOn || isRecording}
-            style={{
-              border: "none",
-              background: !cameraOn || isRecording ? "#666" : "var(--accent)",
-              color: "#0a0a0a",
-              padding: "0.55rem 0.85rem",
-              fontFamily: "'Outfit', monospace",
-              fontSize: "0.8rem",
-              letterSpacing: "0.08em",
-              cursor: !cameraOn || isRecording ? "not-allowed" : "pointer",
-              fontWeight: 700,
-            }}
-          >
-            START RECORDING
-          </button>
+          {cameraOn && (
+            <>
+              <button
+                onClick={startRecording}
+                disabled={isRecording}
+                style={{
+                  padding: "0.55rem 0.85rem",
+                  background: isRecording ? "#666" : "#22c55e",
+                  border: "none",
+                  color: "#fff",
+                  cursor: isRecording ? "not-allowed" : "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                START RECORDING
+              </button>
 
-          <button
-            type="button"
-            onClick={stopRecording}
-            disabled={!isRecording}
-            style={{
-              border: "none",
-              background: !isRecording ? "#666" : "#ef4444",
-              color: "#fff",
-              padding: "0.55rem 0.85rem",
-              fontFamily: "'Outfit', monospace",
-              fontSize: "0.8rem",
-              letterSpacing: "0.08em",
-              cursor: !isRecording ? "not-allowed" : "pointer",
-            }}
-          >
-            STOP RECORDING
-          </button>
-
-          <button
-            type="button"
-            onClick={playGuidance}
-            disabled={!cameraOn || isSpeaking}
-            style={{
-              border: "none",
-              background: !cameraOn || isSpeaking ? "#666" : "#38bdf8",
-              color: "#0a0a0a",
-              padding: "0.55rem 0.85rem",
-              fontFamily: "'Outfit', monospace",
-              fontSize: "0.8rem",
-              letterSpacing: "0.08em",
-              cursor: !cameraOn || isSpeaking ? "not-allowed" : "pointer",
-              fontWeight: 700,
-            }}
-          >
-            PLAY VOICE GUIDE
-          </button>
+              <button
+                onClick={stopRecording}
+                disabled={!isRecording}
+                style={{
+                  padding: "0.55rem 0.85rem",
+                  background: !isRecording ? "#666" : "#ef4444",
+                  border: "none",
+                  color: "#fff",
+                  cursor: !isRecording ? "not-allowed" : "pointer",
+                }}
+              >
+                STOP RECORDING
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -264,28 +277,19 @@ export default function RepairAssistant() {
           minHeight: "420px",
         }}
       >
-        <h3 style={{ fontSize: "0.95rem", letterSpacing: "0.08em", textAlign: "left" }}>
-          GEMINI CHAT LOG
-        </h3>
+        <h3>FELIX CHAT LOG</h3>
+
         <div
           style={{
             overflowY: "auto",
             display: "grid",
             alignContent: "start",
             gap: "0.55rem",
-            textAlign: "left",
           }}
         >
           {chatLog.map((entry, index) => (
-            <p
-              key={`${entry.role}-${index}`}
-              style={{
-                fontSize: "0.84rem",
-                lineHeight: 1.45,
-                color: entry.role === "gemini" ? "var(--foreground)" : "var(--muted)",
-              }}
-            >
-              {entry.role === "gemini" ? "Gemini: " : "System: "}
+            <p key={`${entry.role}-${index}`}>
+              {entry.role === "gemini" ? "Felix: " : "System: "}
               {entry.text}
             </p>
           ))}
