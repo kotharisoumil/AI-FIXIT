@@ -1,14 +1,26 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 
 type Mode = "login" | "signup";
 
+type MockUser = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+const USERS_STORAGE_KEY = "ai_fixit_mock_users";
+const SESSION_STORAGE_KEY = "ai_fixit_auth_session";
+
 export default function AuthControls() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   const isSignup = useMemo(() => mode === "signup", [mode]);
 
@@ -17,11 +29,71 @@ export default function AuthControls() {
     setEmail("");
     setPassword("");
     setName("");
+    setSubmitError("");
+  };
+
+  const readUsers = (): MockUser[] => {
+    const raw = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as MockUser[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeUsers = (users: MockUser[]) => {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const users = readUsers();
+
+    if (isSignup) {
+      const existing = users.find((user) => user.email === normalizedEmail);
+      if (existing) {
+        setSubmitError("An account with this email already exists.");
+        return;
+      }
+
+      const newUser: MockUser = {
+        name: name.trim(),
+        email: normalizedEmail,
+        password,
+      };
+
+      writeUsers([...users, newUser]);
+      localStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({ email: newUser.email, name: newUser.name })
+      );
+      closeModal();
+      router.push("/diagnose");
+      return;
+    }
+
+    const matchedUser = users.find(
+      (user) => user.email === normalizedEmail && user.password === password
+    );
+
+    if (!matchedUser) {
+      setSubmitError("Invalid email or password.");
+      return;
+    }
+
+    localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({ email: matchedUser.email, name: matchedUser.name })
+    );
     closeModal();
+    router.push("/diagnose");
   };
 
   return (
@@ -110,6 +182,10 @@ export default function AuthControls() {
             >
               {isSignup ? "CREATE ACCOUNT" : "LOGIN"}
             </h2>
+
+            {submitError && (
+              <p style={{ color: "#f87171", fontSize: "0.84rem" }}>{submitError}</p>
+            )}
 
             {isSignup && (
               <label style={{ display: "grid", gap: "0.35rem", fontSize: "0.88rem" }}>

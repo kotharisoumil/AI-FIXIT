@@ -1,6 +1,9 @@
 fastapi
 uvicorn
+requests
 opencv-python
 numpy
 ultralytics
 python-multipart
+python-dotenv
+google-genai
