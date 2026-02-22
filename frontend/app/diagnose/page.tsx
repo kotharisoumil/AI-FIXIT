@@ -1,3 +1,5 @@
+import DisposeAssistant from "../components/DisposeAssistant";
+
 export default function DiagnosePage() {
   return (
     <main
@@ -10,6 +12,7 @@ export default function DiagnosePage() {
         fontFamily: "'Outfit', monospace",
         padding: "2rem",
         textAlign: "center",
+        gap: "1rem",
       }}
     >
       <h1
@@ -22,16 +25,7 @@ export default function DiagnosePage() {
       >
         DIAGNOSE
       </h1>
-      <p
-        style={{
-          fontSize: "1.1rem",
-          color: "var(--muted)",
-          maxWidth: "500px",
-          lineHeight: 1.6,
-        }}
-      >
-        Describe your device issue and let AI-FIXIT identify the root cause.
-      </p>
+      <DisposeAssistant />
     </main>
   );
 }

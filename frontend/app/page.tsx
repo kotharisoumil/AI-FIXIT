@@ -1,4 +1,5 @@
 import TypingText from "./components/TypingText";
+import AuthControls from "./components/AuthControls";
 
 export default function Home() {
   return (
@@ -29,6 +30,7 @@ export default function Home() {
       <div style={{ minHeight: "2rem" }}>
         <TypingText />
       </div>
+      <AuthControls />
     </main>
   );
 }

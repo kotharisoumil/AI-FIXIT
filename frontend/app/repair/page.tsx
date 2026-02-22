@@ -1,3 +1,5 @@
+import RepairAssistant from "../components/RepairAssistant";
+
 export default function RepairPage() {
   return (
     <main
@@ -10,6 +12,7 @@ export default function RepairPage() {
         fontFamily: "'Outfit', monospace",
         padding: "2rem",
         textAlign: "center",
+        gap: "0.9rem",
       }}
     >
       <h1
@@ -24,14 +27,15 @@ export default function RepairPage() {
       </h1>
       <p
         style={{
-          fontSize: "1.1rem",
+          fontSize: "1rem",
           color: "var(--muted)",
-          maxWidth: "500px",
+          maxWidth: "700px",
           lineHeight: 1.6,
         }}
       >
-        Get a safe, personalized fix plan read out loud while you follow along.
+        Live video help
       </p>
+      <RepairAssistant />
     </main>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import ThemeToggle from "./components/ThemeToggle";
+import Logo from "./components/Logo";
 
 export const metadata: Metadata = {
   title: "AI-FIXIT",
@@ -22,9 +23,11 @@ export default function RootLayout({
             alignItems: "center",
             justifyContent: "space-between",
             padding: "0.75rem 1.5rem 0 1.5rem",
+            position: "relative",
+            zIndex: 20,
           }}
         >
-          <div style={{ width: "40px" }} />
+          <Logo />
           <Navbar />
           <ThemeToggle />
         </header>
