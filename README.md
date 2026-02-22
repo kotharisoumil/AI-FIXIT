@@ -32,3 +32,9 @@ Expand the AI knowledge base to cover more devices and complex issues
 Introduce predictive maintenance to prevent problems before they occur
 Build community features to share DIY repair tips and recycled solutions
 Partner with recycling programs to make eco-friendly device disposal seamless
+
+Ai-FixIT Skit
+https://www.youtube.com/watch?v=tN1thycvPqE 
+
+Ai-FixIT Demo
+https://www.youtube.com/watch?v=gulLP9L9JEQ
