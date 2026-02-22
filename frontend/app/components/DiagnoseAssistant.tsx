@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { FormEvent, useState, useRef } from "react";
 
 type DiagnosisSummary = {
@@ -9,6 +10,7 @@ type DiagnosisSummary = {
 };
 
 export default function DiagnoseAssistant() {
+  const router = useRouter();
   const [imageName, setImageName] = useState<string>("");
   const [context, setContext] = useState<string>("");
   const [submitted, setSubmitted] = useState(false);
@@ -209,7 +211,7 @@ export default function DiagnoseAssistant() {
             }}
           >
             <p style={{ fontSize: "0.9rem", color: "var(--foreground)" }}>
-              Title: "{summary.title}"
+              Title: &ldquo;{summary.title}&rdquo;
             </p>
             <p style={{ fontSize: "0.86rem", color: "var(--muted)" }}>Effort: {summary.effort}</p>
             <p style={{ fontSize: "0.86rem", color: "var(--muted)" }}>Risk: {summary.risk}</p>
@@ -217,6 +219,34 @@ export default function DiagnoseAssistant() {
           <p style={{ fontSize: "0.9rem", color: "var(--foreground)", lineHeight: 1.55 }}>
             {fullReport}
           </p>
+
+          {(() => {
+            const tooRisky =
+              (summary.risk === "Caution" || summary.risk === "Dangerous") &&
+              summary.effort === "High";
+
+            return (
+              <button
+                type="button"
+                onClick={() => router.push(tooRisky ? "/dispose" : "/repair")}
+                style={{
+                  marginTop: "0.6rem",
+                  border: "none",
+                  background: tooRisky ? "#f87171" : "var(--accent)",
+                  color: "#0a0a0a",
+                  padding: "0.6rem 1rem",
+                  fontSize: "0.84rem",
+                  letterSpacing: "0.08em",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "'Outfit', monospace",
+                  width: "fit-content",
+                }}
+              >
+                {tooRisky ? "VIEW RECOMMENDATIONS" : "START REPAIR"}
+              </button>
+            );
+          })()}
         </section>
       )}
     </div>

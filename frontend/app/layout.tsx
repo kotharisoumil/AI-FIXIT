@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import ThemeToggle from "./components/ThemeToggle";
+import ProfileIcon from "./components/ProfileIcon";
 import Logo from "./components/Logo";
 
 export const metadata: Metadata = {
@@ -29,7 +30,10 @@ export default function RootLayout({
         >
           <Logo />
           <Navbar />
-          <ThemeToggle />
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <ProfileIcon />
+            <ThemeToggle />
+          </div>
         </header>
         {children}
       </body>
