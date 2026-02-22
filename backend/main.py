@@ -1,16 +1,21 @@
 import os
-
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from felix_engine import process_frame_and_audio
 from cv_engine import CVEngine
 from repair_steps import session_store
 
-load_dotenv()
+# Load environment variables
+load_dotenv('.env')
 
+# Initialize FastAPI app
 app = FastAPI()
 
+# -------------------------------
+# CORS setup
+# -------------------------------
 cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "")
 if cors_origins_env.strip():
     allow_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
@@ -30,9 +35,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -------------------------------
+# Initialize engines
+# -------------------------------
 cv_engine = CVEngine()
 
-
+# -------------------------------
+# Root endpoint
+# -------------------------------
 @app.get("/")
 def read_root():
     return {
@@ -40,7 +50,23 @@ def read_root():
         "cv_provider": cv_engine.provider,
     }
 
+# -------------------------------
+# Felix analyze endpoint
+# -------------------------------
+@app.post("/felix/analyze")
+async def felix_analyze(
+    image: UploadFile = File(...),
+    audio: UploadFile = File(...)
+):
+    image_bytes = await image.read()
+    audio_bytes = await audio.read()
 
+    result = process_frame_and_audio(image_bytes, audio_bytes)
+    return result
+
+# -------------------------------
+# CV Engine session endpoints
+# -------------------------------
 @app.get("/session/current-step")
 def get_current_step(user_id: str = "demo_user"):
     session = session_store.get(user_id)
@@ -81,4 +107,3 @@ async def analyze_frame(user_id: str = "demo_user", file: UploadFile = File(...)
         result["next_step"] = session.get_current_step()
 
     return result
-
