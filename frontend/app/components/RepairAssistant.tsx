@@ -12,6 +12,7 @@ export default function RepairAssistant() {
   const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const [cameraOn, setCameraOn] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -21,6 +22,11 @@ export default function RepairAssistant() {
       text: "Enable webcam to begin using Felix.",
     },
   ]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatLog]);
 
   useEffect(() => {
     return () => {
@@ -156,7 +162,6 @@ export default function RepairAssistant() {
         { role: "gemini", text: data.felix_response },
       ]);
 
-      // ✅ Play ElevenLabs audio instead of browser TTS
       if (data.audio_base64) {
         playAudioBase64(data.audio_base64);
       }
@@ -192,13 +197,16 @@ export default function RepairAssistant() {
         display: "grid",
         gridTemplateColumns: "1.15fr 0.85fr",
         gap: "1rem",
+        alignItems: "start",
       }}
     >
+      {/* Left: Video + Buttons */}
       <div
         style={{
           border: "1px solid rgba(128,128,128,0.35)",
           padding: "0.8rem",
-          display: "grid",
+          display: "flex",
+          flexDirection: "column",
           gap: "0.75rem",
         }}
       >
@@ -215,17 +223,28 @@ export default function RepairAssistant() {
           }}
         />
 
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        {/* Buttons — fixed height, no growth */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            flexWrap: "wrap",
+            flexShrink: 0,
+          }}
+        >
           {!cameraOn && (
             <button
               onClick={enableCamera}
               style={{
-                padding: "0.55rem 0.85rem",
+                height: "38px",
+                padding: "0 1rem",
                 background: "#38bdf8",
                 border: "none",
                 color: "#0a0a0a",
                 cursor: "pointer",
                 fontWeight: 700,
+                fontSize: "0.8rem",
+                whiteSpace: "nowrap",
               }}
             >
               ENABLE CAMERA & MICROPHONE
@@ -238,12 +257,15 @@ export default function RepairAssistant() {
                 onClick={startRecording}
                 disabled={isRecording}
                 style={{
-                  padding: "0.55rem 0.85rem",
+                  height: "38px",
+                  padding: "0 1rem",
                   background: isRecording ? "#666" : "#22c55e",
                   border: "none",
                   color: "#fff",
                   cursor: isRecording ? "not-allowed" : "pointer",
                   fontWeight: 700,
+                  fontSize: "0.8rem",
+                  whiteSpace: "nowrap",
                 }}
               >
                 START RECORDING
@@ -253,11 +275,15 @@ export default function RepairAssistant() {
                 onClick={stopRecording}
                 disabled={!isRecording}
                 style={{
-                  padding: "0.55rem 0.85rem",
+                  height: "38px",
+                  padding: "0 1rem",
                   background: !isRecording ? "#666" : "#ef4444",
                   border: "none",
                   color: "#fff",
                   cursor: !isRecording ? "not-allowed" : "pointer",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  whiteSpace: "nowrap",
                 }}
               >
                 STOP RECORDING
@@ -267,32 +293,39 @@ export default function RepairAssistant() {
         </div>
       </div>
 
+      {/* Right: Chat Log with fixed height + scroll */}
       <aside
         style={{
           border: "1px solid rgba(128,128,128,0.35)",
           padding: "0.8rem",
-          display: "grid",
-          gridTemplateRows: "auto 1fr",
+          display: "flex",
+          flexDirection: "column",
           gap: "0.6rem",
-          minHeight: "420px",
+          height: "420px",
         }}
       >
-        <h3>FELIX CHAT LOG</h3>
+        <h3 style={{ margin: 0, flexShrink: 0 }}>FELIX CHAT LOG</h3>
 
         <div
           style={{
             overflowY: "auto",
-            display: "grid",
-            alignContent: "start",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
             gap: "0.55rem",
+            paddingRight: "0.25rem",
           }}
         >
           {chatLog.map((entry, index) => (
-            <p key={`${entry.role}-${index}`}>
-              {entry.role === "gemini" ? "Felix: " : "System: "}
+            <p key={`${entry.role}-${index}`} style={{ margin: 0 }}>
+              <span style={{ fontWeight: 600 }}>
+                {entry.role === "gemini" ? "Felix: " : "System: "}
+              </span>
               {entry.text}
             </p>
           ))}
+          {/* Anchor for auto-scroll */}
+          <div ref={chatEndRef} />
         </div>
       </aside>
     </section>
