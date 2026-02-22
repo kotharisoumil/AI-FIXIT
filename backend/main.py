@@ -1,6 +1,8 @@
+# main.py
 import os
+import base64
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from felix_engine import process_frame_and_audio
@@ -8,11 +10,9 @@ from cv_engine import CVEngine
 from diagnose_engine import generate_diagnosis
 from repair_steps import session_store
 
-# Load environment variables
 load_dotenv('.env')
 
-# Initialize FastAPI app
-app = FastAPI()
+app = FastAPI(title="FixVision AI Backend", version="1.0.0")
 
 # -------------------------------
 # CORS setup
@@ -47,7 +47,7 @@ cv_engine = CVEngine()
 @app.get("/")
 def read_root():
     return {
-        "message": "Repair AI Backend is running",
+        "message": "FixVision AI Backend is running",
         "cv_provider": cv_engine.provider,
     }
 
@@ -63,7 +63,16 @@ async def felix_analyze(
     audio_bytes = await audio.read()
 
     result = process_frame_and_audio(image_bytes, audio_bytes)
-    return result
+
+    # Encode audio as base64 for JSON transport
+    audio_b64 = base64.b64encode(result["audio_bytes"]).decode("utf-8")
+
+    return {
+        "transcription": result["transcription"],
+        "felix_response": result["felix_response"],
+        "audio_base64": audio_b64,
+        "audio_format": "mp3"
+    }
 
 # -------------------------------
 # CV Engine session endpoints
@@ -85,9 +94,11 @@ def get_current_step(user_id: str = "demo_user"):
         "current_index": session.current_step_index,
     }
 
-
 @app.post("/session/analyze")
-async def analyze_frame(user_id: str = "demo_user", file: UploadFile = File(...)):
+async def analyze_frame(
+    user_id: str = "demo_user",
+    file: UploadFile = File(...)
+):
     session = session_store.get(user_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -109,40 +120,25 @@ async def analyze_frame(user_id: str = "demo_user", file: UploadFile = File(...)
 
     return result
 
-
 # -------------------------------
 # Diagnose endpoint
 # -------------------------------
 @app.post("/diagnose")
 async def diagnose_analyze(
     image: UploadFile = File(...),
-    context: str = ""
+    context: str = Form(default="")
 ):
-    """
-    Generate a diagnosis report based on device image and issue context.
-    
-    Args:
-        image: Image file of the device
-        context: Text description of the issue (optional)
-    
-    Returns:
-        Diagnosis report with title, effort level, risk level, and detailed report
-    """
     try:
         image_bytes = await image.read()
-        
-        # Extract image format from filename
         filename = image.filename or "image.jpg"
         image_format = filename.split(".")[-1].lower()
-        
-        # Generate diagnosis
         diagnosis_report = generate_diagnosis(image_bytes, image_format, context)
-        
+
         return {
             "success": True,
             "diagnosis": diagnosis_report
         }
-    
+
     except Exception as e:
         return {
             "success": False,

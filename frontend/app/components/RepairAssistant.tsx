@@ -33,7 +33,6 @@ export default function RepairAssistant() {
       ) {
         mediaRecorderRef.current.stop();
       }
-      window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -66,8 +65,7 @@ export default function RepairAssistant() {
         ...prev,
         {
           role: "system",
-          text:
-            "Camera/microphone permission denied. Please allow access and refresh.",
+          text: "Camera/microphone permission denied. Please allow access and refresh.",
         },
       ]);
     }
@@ -158,8 +156,11 @@ export default function RepairAssistant() {
         { role: "gemini", text: data.felix_response },
       ]);
 
-      speakResponse(data.felix_response);
-    } catch (error) {
+      // ✅ Play ElevenLabs audio instead of browser TTS
+      if (data.audio_base64) {
+        playAudioBase64(data.audio_base64);
+      }
+    } catch {
       setChatLog((prev) => [
         ...prev,
         {
@@ -171,13 +172,13 @@ export default function RepairAssistant() {
   };
 
   // -------------------------------
-  // Speak Felix Response
+  // Play ElevenLabs Audio
   // -------------------------------
-  const speakResponse = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    window.speechSynthesis.speak(utterance);
+  const playAudioBase64 = (base64: string) => {
+    const audio = new Audio(`data:audio/mp3;base64,${base64}`);
+    audio.play().catch((err) => {
+      console.error("Audio playback failed:", err);
+    });
   };
 
   // -------------------------------
@@ -214,7 +215,6 @@ export default function RepairAssistant() {
           }}
         />
 
-        {/* Buttons */}
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {!cameraOn && (
             <button
