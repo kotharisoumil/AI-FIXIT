@@ -1,4 +1,4 @@
-import DisposeAssistant from "../components/DisposeAssistant";
+import DiagnoseAssistant from "../components/DiagnoseAssistant";
 
 export default function DiagnosePage() {
   return (
@@ -25,7 +25,7 @@ export default function DiagnosePage() {
       >
         DIAGNOSE
       </h1>
-      <DisposeAssistant />
+      <DiagnoseAssistant />
     </main>
   );
 }

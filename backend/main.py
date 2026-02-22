@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from felix_engine import process_frame_and_audio
 from cv_engine import CVEngine
+from diagnose_engine import generate_diagnosis
 from repair_steps import session_store
 
 # Load environment variables
@@ -107,3 +108,43 @@ async def analyze_frame(user_id: str = "demo_user", file: UploadFile = File(...)
         result["next_step"] = session.get_current_step()
 
     return result
+
+
+# -------------------------------
+# Diagnose endpoint
+# -------------------------------
+@app.post("/diagnose")
+async def diagnose_analyze(
+    image: UploadFile = File(...),
+    context: str = ""
+):
+    """
+    Generate a diagnosis report based on device image and issue context.
+    
+    Args:
+        image: Image file of the device
+        context: Text description of the issue (optional)
+    
+    Returns:
+        Diagnosis report with title, effort level, risk level, and detailed report
+    """
+    try:
+        image_bytes = await image.read()
+        
+        # Extract image format from filename
+        filename = image.filename or "image.jpg"
+        image_format = filename.split(".")[-1].lower()
+        
+        # Generate diagnosis
+        diagnosis_report = generate_diagnosis(image_bytes, image_format, context)
+        
+        return {
+            "success": True,
+            "diagnosis": diagnosis_report
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
