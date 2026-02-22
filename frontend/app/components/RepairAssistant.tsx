@@ -88,6 +88,7 @@ export default function RepairAssistant() {
         audio: false,
       });
       streamRef.current = stream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -204,6 +205,9 @@ export default function RepairAssistant() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [analyzeCurrentFrame]);
 
+  // -------------------------------
+  // UI
+  // -------------------------------
   return (
     <section
       style={{
@@ -236,6 +240,7 @@ export default function RepairAssistant() {
         />
         <canvas ref={canvasRef} style={{ display: "none" }} />
 
+        {/* Buttons */}
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button
             type="button"
