@@ -1,6 +1,4 @@
-import TypingText from "./components/TypingText";
-
-export default function Home() {
+export default function RepairPage() {
   return (
     <main
       style={{
@@ -16,19 +14,24 @@ export default function Home() {
     >
       <h1
         style={{
-          fontSize: "clamp(3rem, 8vw, 6rem)",
-          fontWeight: 800,
-          letterSpacing: "-0.02em",
+          fontSize: "clamp(2rem, 5vw, 3.5rem)",
+          fontWeight: 700,
           color: "var(--foreground)",
-          lineHeight: 1.1,
-          marginBottom: "1.2rem",
+          marginBottom: "1rem",
         }}
       >
-        AI-FIXIT
+        REPAIR
       </h1>
-      <div style={{ minHeight: "2rem" }}>
-        <TypingText />
-      </div>
+      <p
+        style={{
+          fontSize: "1.1rem",
+          color: "var(--muted)",
+          maxWidth: "500px",
+          lineHeight: 1.6,
+        }}
+      >
+        Get a safe, personalized fix plan read out loud while you follow along.
+      </p>
     </main>
   );
 }
