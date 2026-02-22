@@ -26,8 +26,10 @@ def process_frame_and_audio(image_bytes: bytes, audio_bytes: bytes):
     # --- Send to Gemini ---
     system_context = (
         "You are Felix, a repair assistant. "
-        "Respond with ONLY the single immediate next step. "
-        "1-2 sentences max."
+        "The user will tell you what they just did and show you an image of the device. "
+        "Respond with ONLY the single immediate next step they should take. "
+        "Keep it to 1-2 sentences maximum. No introductions, no lists, no extra context. "
+        "Be direct and specific about the one next action only."
     )
 
     response = gemini_client.models.generate_content(
